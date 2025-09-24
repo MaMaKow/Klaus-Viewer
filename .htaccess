@@ -1,0 +1,21 @@
+AuthType Basic
+AuthName "Geschützter Bereich"
+AuthUserFile /etc/apache2/.htpasswd
+
+<RequireAny>
+    Require ip 2a03:b580:ac00:9d01::/64
+    Require ip 2a03:b580:b000:4300::/64
+    Require ip 2a03:b580:b000:800::/64
+    Require ip 109.85.15.173
+    Require ip 46.35.34.196
+    Require valid-user
+</RequireAny>
+
+# Protect config file (Apache 2.4 syntax)
+<Files "config.php">
+    Require all denied
+</Files>
+
+<Files "error.log">
+    Require all denied
+</Files>
