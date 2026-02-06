@@ -1,4 +1,16 @@
 <!DOCTYPE html>
+<?php
+require_once __DIR__ . '/bootstrap.php';
+
+// Jetzt steht $config bereit, Autoloader läuft usw.
+
+// Datenbankverbindung vorbereiten:
+use KlausViewer\Database\DatabaseWrapper;
+$result = DatabaseWrapper::instance()->run("SELECT DISTINCT `PackCabinet` FROM `Stockinginfo`;");
+while ($row = $result->fetch(PDO::FETCH_OBJ)) {
+    $PackCabinets[] = $row->PackCabinet;
+}
+?>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
