@@ -60,9 +60,16 @@ spl_autoload_register(function ($class_name) {
         return;
     }
 
-    $class_name_without_vendor_namespace = preg_replace('/^[^\\]+\\/', '', $class_name);
-    if ($class_name_without_vendor_namespace !== $class_name) {
-        $file = $base_dir . str_replace('\\', '/', $class_name_without_vendor_namespace) . '.php';
+  $base_dir = FILE_SYSTEM_APPLICATION_PATH . '/src/';
+    $file = $base_dir . str_replace('\\', '/', $class_name) . '.php';
+    if (file_exists($file)) {
+        include_once $file;
+        return;
+    }
+
+    $namespace_segments = explode('\\', $class_name, 2);
+    if (2 === count($namespace_segments)) {
+        $file = $base_dir . str_replace('\\', '/', $namespace_segments[1]) . '.php';
         if (file_exists($file)) {
             include_once $file;
             return;
