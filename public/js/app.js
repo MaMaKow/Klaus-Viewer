@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const packageDetailsElement = document.getElementById('package-details');
     const packageInfoElement = document.getElementById('package-info');
 
+    const apiBaseUrl = document.body.dataset.apiBaseUrl || 'api';
+
     // Globale Variablen für Schubladenabmessungen basierend auf der Datenbankabfrage
     const minX = 40;
     const maxX = 1130;
@@ -20,19 +22,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const schubladeWidth = maxX - minX;
     const schubladeHeight = maxY - minY;
 
-    // Schränke und Schubladen aus der Datenbank abrufen
     fetchCabinets();
 
-    // Funktion zum Abrufen der Schränke aus der Datenbank
+    async function fetchJson(url) {
+        const response = await fetch(url, {
+            headers: {
+                Accept: 'application/json'
+            }
+        });
+
+        let payload = {};
+        try {
+            payload = await response.json();
+        } catch (error) {
+            payload = {};
+        }
+
+        if (!response.ok) {
+            const message = payload.error || `HTTP ${response.status}`;
+            throw new Error(message);
+        }
+
+        return payload;
+    }
+
     async function fetchCabinets() {
         try {
             loadingElement.style.display = 'block';
 
-            // In einer echten Anwendung würde hier ein AJAX-Request an den Server gehen
-            // Für dieses Beispiel simulieren wir die Daten
-            const cabinets = await mockFetchCabinets();
+            const payload = await fetchJson(`${apiBaseUrl}/pack-cabinets.php`);
+            const cabinets = payload.packCabinets || [];
 
-            // Schränke in die Auswahl laden
             cabinets.forEach(cabinet => {
                 const option = document.createElement('option');
                 option.value = cabinet;
@@ -48,11 +68,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Event-Listener für Schrankauswahl
     cabinetSelect.addEventListener('change', async function() {
         const cabinetId = this.value;
 
-        // Schubladen-Auswahl zurücksetzen
         drawerSelect.innerHTML = '<option value="">Bitte wählen Sie eine Schublade</option>';
         drawerSelect.disabled = !cabinetId;
         visualizeBtn.disabled = true;
@@ -63,8 +81,11 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 loadingElement.style.display = 'block';
 
-                // Schubladen für den ausgewählten Schrank abrufen
-                const drawers = await mockFetchDrawers(cabinetId);
+                const query = new URLSearchParams({
+                    packCabinet: cabinetId
+                });
+                const payload = await fetchJson(`${apiBaseUrl}/pack-drawers.php?${query.toString()}`);
+                const drawers = payload.packDrawers || [];
 
                 if (drawers.length > 0) {
                     drawers.forEach(drawer => {
@@ -88,12 +109,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Event-Listener für Schubladenauswahl
     drawerSelect.addEventListener('change', function() {
         visualizeBtn.disabled = !this.value;
     });
 
-    // Event-Listener für Visualisieren-Button
     visualizeBtn.addEventListener('click', async function() {
         const cabinetId = cabinetSelect.value;
         const drawerId = drawerSelect.value;
@@ -105,10 +124,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 noDataElement.style.display = 'none';
                 packageDetailsElement.style.display = 'none';
 
-                // Packungen für die ausgewählte Schublade abrufen
-                const packages = await mockFetchPackages(cabinetId, drawerId);
+                const query = new URLSearchParams({
+                    packCabinet: cabinetId,
+                    packDrawer: drawerId
+                });
+                const payload = await fetchJson(`${apiBaseUrl}/pack-packages.php?${query.toString()}`);
+                const packages = payload.packages || [];
 
-                if (packages && packages.length > 0) {
+                if (packages.length > 0) {
                     renderDrawer(cabinetId, drawerId, packages);
                     visualizationContainer.style.display = 'block';
                     noDataElement.style.display = 'none';
@@ -126,25 +149,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Funktion zum Rendern der Schublade mit Packungen
     function renderDrawer(cabinetId, drawerId, packages) {
-        // Titel aktualisieren
         drawerTitle.textContent = `Schrank ${cabinetId}, Schublade ${drawerId}`;
 
-        // Schubladengröße setzen (basierend auf den min/max Werten aus der DB)
         const containerWidth = 800;
         const scaleFactor = containerWidth / schubladeWidth;
         const containerHeight = schubladeHeight * scaleFactor;
 
         drawerElement.style.width = `${containerWidth}px`;
         drawerElement.style.height = `${containerHeight}px`;
-
-        // Alte Packungen entfernen
         drawerElement.innerHTML = '';
 
-        // Packungen hinzufügen
         packages.forEach(pkg => {
-            // Position und Größe skalieren
             const x = (pkg.PackPlaceX - minX) * scaleFactor;
             const y = (pkg.PackPlaceY - minY) * scaleFactor;
             const width = pkg.PackLength * scaleFactor;
@@ -159,11 +175,9 @@ document.addEventListener('DOMContentLoaded', function() {
             packageElement.title = `${pkg.ArticleId || 'Unbekannt'}\n${pkg.Description || ''}`;
             packageElement.dataset.package = JSON.stringify(pkg);
 
-            // Kürzel für die Anzeige auf der Packung
             const shortText = pkg.ArticleId ? pkg.ArticleId.substring(0, 4) + '...' : 'PKG';
             packageElement.textContent = shortText;
 
-            // Event-Listener für Klick auf Packung
             packageElement.addEventListener('click', function() {
                 showPackageDetails(JSON.parse(this.dataset.package));
             });
@@ -171,7 +185,6 @@ document.addEventListener('DOMContentLoaded', function() {
             drawerElement.appendChild(packageElement);
         });
 
-        // Letzte Aktualisierung anzeigen
         const latestSnapshot = packages.reduce((latest, pkg) => {
             const snapshotTime = new Date(pkg.SnapshotTime);
             return snapshotTime > latest ? snapshotTime : latest;
@@ -179,7 +192,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         lastUpdateElement.textContent = `Letzte Aktualisierung: ${latestSnapshot.toLocaleString()}`;
 
-        // Schubladeninformationen anzeigen
         drawerInfoElement.innerHTML = `
             <p><strong>Schrank:</strong> ${cabinetId}</p>
             <p><strong>Schublade:</strong> ${drawerId}</p>
@@ -188,7 +200,6 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
-    // Funktion zum Anzeigen der Packungsdetails
     function showPackageDetails(pkg) {
         packageInfoElement.innerHTML = `
             <div><span class="label">Packungs-ID:</span> <span>${pkg.PackId || 'N/A'}</span></div>
@@ -206,71 +217,5 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         packageDetailsElement.style.display = 'block';
-    }
-
-    // Mock-Funktionen zur Simulation der Datenbankabfragen
-    async function mockFetchCabinets() {
-        // Simulierte Verzögerung für den API-Aufruf
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Rückgabe von simulierten Schrankdaten
-        return [1, 2, 3, 4, 5];
-    }
-
-    async function mockFetchDrawers(cabinetId) {
-        // Simulierte Verzögerung für den API-Aufruf
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Rückgabe von simulierten Schubladendaten basierend auf dem Schrank
-        const drawersByCabinet = {
-            1: [1, 2, 3],
-            2: [1, 2],
-            3: [1, 2, 3, 4],
-            4: [1],
-            5: [1, 2, 3, 4, 5]
-        };
-
-        return drawersByCabinet[cabinetId] || [];
-    }
-
-    async function mockFetchPackages(cabinetId, drawerId) {
-        // Simulierte Verzögerung für den API-Aufruf
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // Zufällige Entscheidung, ob Packungen vorhanden sind
-        if (Math.random() < 0.1) return []; // 10% Chance, dass keine Packungen vorhanden sind
-
-        // Generiere eine zufällige Anzahl von Packungen (zwischen 3 und 15)
-        const numPackages = Math.floor(Math.random() * 13) + 3;
-        const packages = [];
-
-        for (let i = 0; i < numPackages; i++) {
-            // Generiere zufällige Positionen und Abmessungen innerhalb der Schublade
-            const packLength = Math.floor(Math.random() * 100) + 50;
-            const packWidth = Math.floor(Math.random() * 80) + 40;
-            const packHeight = Math.floor(Math.random() * 60) + 30;
-
-            // Stelle sicher, dass die Packung innerhalb der Schublade liegt
-            const packPlaceX = Math.floor(Math.random() * (schubladeWidth - packLength)) + minX;
-            const packPlaceY = Math.floor(Math.random() * (schubladeHeight - packWidth)) + minY;
-
-            packages.push({
-                PackId: Math.floor(Math.random() * 10000),
-                ArticleId: `ART-${Math.floor(Math.random() * 1000)}`,
-                Description: `Artikelbeschreibung ${Math.floor(Math.random() * 1000)}`,
-                PackBatchNo: `BATCH-${Math.floor(Math.random() * 100)}`,
-                PackSerialNo: `SN-${Math.floor(Math.random() * 10000)}`,
-                PackExpiryDate: new Date(Date.now() + Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toLocaleDateString(),
-                PackPlaceX: packPlaceX,
-                PackPlaceY: packPlaceY,
-                PackLength: packLength,
-                PackWidth: packWidth,
-                PackHeight: packHeight,
-                PackDateIn: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)),
-                SnapshotTime: new Date()
-            });
-        }
-
-        return packages;
     }
 });
