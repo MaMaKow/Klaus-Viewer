@@ -26,7 +26,7 @@ define('FILE_SYSTEM_APPLICATION_PATH', __DIR__ . '/../');
  *
  */
 $folder_tree_depth_in_chars = strlen(substr(getcwd(), strlen(__DIR__)));
-$domain = $_SERVER['SERVER_NAME'];
+$domain = $_SERVER['SERVER_NAME'] ?? 'localhost';
 $root_folder = substr(dirname($_SERVER["SCRIPT_NAME"]), 0, strlen(dirname($_SERVER["SCRIPT_NAME"])) - $folder_tree_depth_in_chars) . "/";
 define('HTTP_SERVER_DOMAIN', $domain);
 define('HTTP_SERVER_APPLICATION_PATH', $root_folder);
@@ -52,6 +52,22 @@ spl_autoload_register(function ($class_name) {
         include_once $file;
         return;
     }
+
+    $base_dir = FILE_SYSTEM_APPLICATION_PATH . '/src/';
+    $file = $base_dir . str_replace('\\', '/', $class_name) . '.php';
+    if (file_exists($file)) {
+        include_once $file;
+        return;
+    }
+
+    $class_name_without_vendor_namespace = preg_replace('/^[^\\]+\\/', '', $class_name);
+    if ($class_name_without_vendor_namespace !== $class_name) {
+        $file = $base_dir . str_replace('\\', '/', $class_name_without_vendor_namespace) . '.php';
+        if (file_exists($file)) {
+            include_once $file;
+            return;
+        }
+    }
 });
 
 if (!file_exists(FILE_SYSTEM_APPLICATION_PATH . 'config/config.php')) {
@@ -68,7 +84,7 @@ if (!file_exists(FILE_SYSTEM_APPLICATION_PATH . 'config/config.php')) {
     /*
      * Complement the configuration array with the default values for unset parameters:
      */
-    foreach (\KlausViewer\App\Configuration::$List_of_configuration_parameters as $key => $value) {
+    foreach (\KlausViewer\App\Model\Configuration::$List_of_configuration_parameters as $key => $value) {
         if (!isset($config[$key])) {
             $config[$key] = $value;
         }
