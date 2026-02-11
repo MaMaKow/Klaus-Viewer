@@ -1,15 +1,6 @@
 <!DOCTYPE html>
 <?php
-require_once __DIR__ . '/bootstrap.php';
-
-// Jetzt steht $config bereit, Autoloader läuft usw.
-
-// Datenbankverbindung vorbereiten:
-use KlausViewer\Database\DatabaseWrapper;
-$result = DatabaseWrapper::instance()->run("SELECT DISTINCT `PackCabinet` FROM `Stockinginfo`;");
-while ($row = $result->fetch(PDO::FETCH_OBJ)) {
-    $PackCabinets[] = $row->PackCabinet;
-}
+$apiBaseUrl = 'api';
 ?>
 <html lang="de">
 <head>
@@ -18,7 +9,7 @@ while ($row = $result->fetch(PDO::FETCH_OBJ)) {
     <title>Lagerverwaltungssystem - Schubladenvisualisierung</title>
     <link rel="stylesheet" type="text/css" href="style.css" media="all">
 </head>
-<body>
+<body data-api-base-url="<?= htmlspecialchars($apiBaseUrl, ENT_QUOTES, 'UTF-8'); ?>">
     <div class="container">
         <h1>Lagerverwaltungssystem - Schubladenvisualisierung</h1>
 
