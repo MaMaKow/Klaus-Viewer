@@ -134,4 +134,4 @@ date_default_timezone_set($config['timezone']);
  * This is necessary for the usage of UTF-8 characters in functions like mb_substr()
  */
 mb_internal_encoding($config['mb_internal_encoding']);
-localization::initialize_gettext($config["language"]);
+//\KlausViewer\Utility\Localization::initialize_gettext($config["language"]);

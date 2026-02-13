@@ -46,18 +46,18 @@ class DatabaseWrapper {
     const ERROR_MESSAGE_DUPLICATE_ENTRY_FOR_KEY = 'Duplicate entry for key';
 
     protected function __construct() {
-        $configuration = new Configuration();
+        $configuration = new \KlausViewer\App\Model\Configuration();
         $options = array(
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
-            PDO::ATTR_EMULATE_PREPARES => FALSE,
-            PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'
+            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_OBJ,
+            \PDO::ATTR_EMULATE_PREPARES => FALSE,
+            \PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'
         );
-        $this->database_host = $config['database_host'];
-        $this->database_name = $config['database_name'];
-        $this->database_port = $config['database_port'];
-        $this->database_user_name = $config['database_user'];
-        $this->database_password = $config['database_password'];
+        $this->database_host = $configuration->getDatabaseHost();
+        $this->database_name = $configuration->getDatabaseName();
+        $this->database_port = $configuration->getDatabasePort();
+        $this->database_user_name = $configuration->getDatabaseUser();
+        $this->database_password = $configuration->getDatabasePassword();
         if (!empty($this->database_port) and 3306 != $this->database_port) {
             $port_string = 'port=' . $this->database_port . ';';
         } else {
@@ -69,7 +69,7 @@ class DatabaseWrapper {
         $dsn = 'mysql:host=' . $this->database_host . ';' . $port_string . 'dbname=' . $this->database_name . ';charset=utf8mb4';
         try {
             $this->pdo = new \PDO($dsn, $this->database_user_name, $this->database_password, $options);
-        } catch (PDOException $exception) {
+        } catch (\PDOException $exception) {
             \KlausViewer\Utility\GeneralUtility::printDebugVariable($exception);
             $message = gettext('There was an error while connecting to the database.')
                     . " " . gettext('Please see the error log for more details!')
@@ -105,7 +105,7 @@ class DatabaseWrapper {
         }
         $sql_query = "SELECT DATABASE() as `database_name` FROM DUAL;"; //On all databases except Oracle FROM DUAL can be omitted.
         $result = self::$instance->run($sql_query);
-        while ($row = $result->fetch(PDO::FETCH_OBJ)) {
+        while ($row = $result->fetch(\PDO::FETCH_OBJ)) {
             $database_name = $row->database_name;
         }
         return $database_name;
@@ -126,7 +126,7 @@ class DatabaseWrapper {
      *  @param string $sql_query An SQL string to be queried against the database. It may contain placeholders which will be replaced by $arguments.
      *  @param array $arguments An array of values to be replaced into the placeholders.
      */
-    public function run($sql_query, $arguments = []): PDOStatement {
+    public function run($sql_query, $arguments = []): \PDOStatement {
         try {
             $statement = $this->pdo->prepare($sql_query);
             /*
@@ -193,7 +193,7 @@ class DatabaseWrapper {
             'table_name' => $table_name,
             'index_name' => $index_name
         ));
-        while ($row = $result->fetch(PDO::FETCH_OBJ)) {
+        while ($row = $result->fetch(\PDO::FETCH_OBJ)) {
             if ($row->index_exists > 0) {
                 return TRUE;
             }
@@ -217,7 +217,7 @@ class DatabaseWrapper {
         $result = self::instance()->run($sql_query, array(
             'referencedTableName' => $referenced_table_name,
         ));
-        while ($row = $result->fetch(PDO::FETCH_OBJ)) {
+        while ($row = $result->fetch(\PDO::FETCH_OBJ)) {
             if ($row->index_exists > 0) {
                 $table_constraints[] = clone $row;
             }
