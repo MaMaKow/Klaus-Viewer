@@ -28,8 +28,6 @@ $result = DatabaseWrapper::instance()->run(
             AND `SnapshotTime` = (
                 SELECT MAX(`SnapshotTime`)
                 FROM `Stockinginfo`
-                WHERE `PackCabinet` = :packCabinet
-                    AND `PackDrawer` = :packDrawer
             )
         ORDER BY `PackId`',
     [

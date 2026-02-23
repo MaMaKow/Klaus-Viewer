@@ -15,10 +15,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const apiBaseUrl = document.body.dataset.apiBaseUrl || 'api';
 
     // Globale Variablen für Schubladenabmessungen basierend auf der Datenbankabfrage
-    const minX = 40;
-    const maxX = 1130;
-    const minY = 20;
-    const maxY = 1305;
+    const minX = 0;
+    const maxX = 1230;
+    const minY = 0;
+    const maxY = 1860;
     const schubladeWidth = maxX - minX;
     const schubladeHeight = maxY - minY;
 
@@ -152,7 +152,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderDrawer(cabinetId, drawerId, packages) {
         drawerTitle.textContent = `Schrank ${cabinetId}, Schublade ${drawerId}`;
 
-        const containerWidth = 800;
+        //const containerWidth = 800;
+        const containerWidth = 1230;
         const scaleFactor = containerWidth / schubladeWidth;
         const containerHeight = schubladeHeight * scaleFactor;
 
@@ -161,10 +162,12 @@ document.addEventListener('DOMContentLoaded', function() {
         drawerElement.innerHTML = '';
 
         packages.forEach(pkg => {
-            const x = (maxX - pkg.PackPlaceX - pkg.PackLength) * scaleFactor;
-            const y = (maxY - pkg.PackPlaceY - pkg.PackWidth) * scaleFactor;
-            const width = pkg.PackLength * scaleFactor;
-            const height = pkg.PackWidth * scaleFactor;
+            //const x = (maxX - pkg.PackPlaceX - pkg.PackLength) * scaleFactor;
+            const x = (maxX - pkg.PackPlaceX) * scaleFactor;
+            //const y = (maxY - pkg.PackPlaceY - pkg.PackWidth) * scaleFactor;
+            const y = (maxY - pkg.PackPlaceY) * scaleFactor;
+            const width = pkg.PackWidth * scaleFactor;
+            const height = pkg.PackLength * scaleFactor;
 
             const packageElement = document.createElement('div');
             packageElement.className = 'package';
@@ -172,10 +175,10 @@ document.addEventListener('DOMContentLoaded', function() {
             packageElement.style.top = `${y}px`;
             packageElement.style.width = `${width}px`;
             packageElement.style.height = `${height}px`;
-            packageElement.title = `${pkg.ArticleId || 'Unbekannt'}\n${pkg.Description || ''}`;
+            packageElement.title = `${pkg.Description || 'Unbekannt'}\n${pkg.ArticleId || ''}`;
             packageElement.dataset.package = JSON.stringify(pkg);
 
-            const shortText = pkg.ArticleId ? pkg.ArticleId.substring(0, 4) + '...' : 'PKG';
+            const shortText = pkg.Description ? pkg.Description.substring(0, 6) + '...' : 'PKG';
             packageElement.textContent = shortText;
 
             packageElement.addEventListener('click', function() {
