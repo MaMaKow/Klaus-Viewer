@@ -161,8 +161,8 @@ document.addEventListener('DOMContentLoaded', function() {
         drawerElement.innerHTML = '';
 
         packages.forEach(pkg => {
-            const x = (pkg.PackPlaceX - minX) * scaleFactor;
-            const y = (pkg.PackPlaceY - minY) * scaleFactor;
+            const x = (maxX - pkg.PackPlaceX - pkg.PackLength) * scaleFactor;
+            const y = (maxY - pkg.PackPlaceY - pkg.PackWidth) * scaleFactor;
             const width = pkg.PackLength * scaleFactor;
             const height = pkg.PackWidth * scaleFactor;
 
