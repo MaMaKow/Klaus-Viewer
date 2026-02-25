@@ -58,16 +58,20 @@ if ($hasCabinet) {
 }
 
 if ($search !== '') {
-    $params['search'] = '%' . $search . '%';
-
     if ($searchField === 'all') {
+        $params['searchPackId'] = '%' . $search . '%';
+        $params['searchArticleId'] = '%' . $search . '%';
+        $params['searchPackBatchNo'] = '%' . $search . '%';
+        $params['searchPackSerialNo'] = '%' . $search . '%';
+
         $sql .= ' AND (
-            CAST(`PackId` AS CHAR) LIKE :search
-            OR CAST(`ArticleId` AS CHAR) LIKE :search
-            OR `PackBatchNo` LIKE :search
-            OR `PackSerialNo` LIKE :search
+            CAST(`PackId` AS CHAR) LIKE :searchPackId
+            OR CAST(`ArticleId` AS CHAR) LIKE :searchArticleId
+            OR `PackBatchNo` LIKE :searchPackBatchNo
+            OR `PackSerialNo` LIKE :searchPackSerialNo
         )';
     } else {
+        $params['search'] = '%' . $search . '%';
         $sql .= sprintf(' AND CAST(`%s` AS CHAR) LIKE :search', $searchField);
     }
 }
