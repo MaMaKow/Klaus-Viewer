@@ -31,6 +31,41 @@ $apiBaseUrl = 'api';
             <button id="visualize-btn" disabled>Visualisieren</button>
         </div>
 
+        <div class="search-controls">
+            <div class="control-group">
+                <label for="search-query">Suche:</label>
+                <input
+                    id="search-query"
+                    type="text"
+                    placeholder="z. B. 12345, CHARGE-01 oder SERIAL"
+                >
+            </div>
+
+            <div class="control-group">
+                <label for="search-field">Suchfeld:</label>
+                <select id="search-field">
+                    <option value="all">Alle Felder</option>
+                    <option value="PackId">PackId</option>
+                    <option value="ArticleId">ArticleId</option>
+                    <option value="PackBatchNo">PackBatchNo</option>
+                    <option value="PackSerialNo">PackSerialNo</option>
+                </select>
+            </div>
+
+            <div class="control-group checkbox-group">
+                <label for="global-search-checkbox">Bereich:</label>
+                <label class="checkbox-label">
+                    <input id="global-search-checkbox" type="checkbox">
+                    Im gesamten Kommissionierautomaten suchen
+                </label>
+            </div>
+
+            <button id="search-btn">Suchen</button>
+            <button id="reset-search-btn">Suche zurücksetzen</button>
+        </div>
+
+        <div class="search-status" id="search-status" style="display: none;"></div>
+
         <div class="loading" id="loading" style="display: none;">
             Lade Daten...
         </div>
@@ -51,9 +86,27 @@ $apiBaseUrl = 'api';
             </div>
         </div>
 
-        <div class="no-data" id="no-data" style="display: none;">
-            Keine Packungen in dieser Schublade vorhanden.
+        <div class="search-results" id="search-results" style="display: none;">
+            <h2>Suchergebnisse im Kommissionierautomaten</h2>
+            <div class="results-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>PackId</th>
+                            <th>ArticleId</th>
+                            <th>Charge</th>
+                            <th>Seriennummer</th>
+                            <th>Schrank</th>
+                            <th>Schublade</th>
+                            <th>Beschreibung</th>
+                        </tr>
+                    </thead>
+                    <tbody id="search-results-body"></tbody>
+                </table>
+            </div>
         </div>
+
+        <div class="no-data" id="no-data" style="display: none;"></div>
     </div>
 
     <script src="js/app.js"></script>

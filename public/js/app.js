@@ -2,6 +2,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const cabinetSelect = document.getElementById('cabinet-select');
     const drawerSelect = document.getElementById('drawer-select');
     const visualizeBtn = document.getElementById('visualize-btn');
+    const searchQueryInput = document.getElementById('search-query');
+    const searchFieldSelect = document.getElementById('search-field');
+    const globalSearchCheckbox = document.getElementById('global-search-checkbox');
+    const searchBtn = document.getElementById('search-btn');
+    const resetSearchBtn = document.getElementById('reset-search-btn');
+    const searchStatusElement = document.getElementById('search-status');
     const visualizationContainer = document.getElementById('visualization-container');
     const drawerElement = document.getElementById('drawer');
     const drawerTitle = document.getElementById('drawer-title');
@@ -11,10 +17,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const noDataElement = document.getElementById('no-data');
     const packageDetailsElement = document.getElementById('package-details');
     const packageInfoElement = document.getElementById('package-info');
+    const searchResultsElement = document.getElementById('search-results');
+    const searchResultsBodyElement = document.getElementById('search-results-body');
 
     const apiBaseUrl = document.body.dataset.apiBaseUrl || 'api';
 
-    // Globale Variablen für Schubladenabmessungen basierend auf der Datenbankabfrage
     const minX = 0;
     const maxX = 1230;
     const minY = 0;
@@ -74,8 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
         drawerSelect.innerHTML = '<option value="">Bitte wählen Sie eine Schublade</option>';
         drawerSelect.disabled = !cabinetId;
         visualizeBtn.disabled = true;
-        visualizationContainer.style.display = 'none';
-        noDataElement.style.display = 'none';
+        hideResultAreas();
 
         if (cabinetId) {
             try {
@@ -97,7 +103,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     drawerSelect.disabled = false;
                 } else {
                     drawerSelect.disabled = true;
-                    visualizeBtn.disabled = true;
                 }
 
                 loadingElement.style.display = 'none';
@@ -114,45 +119,117 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     visualizeBtn.addEventListener('click', async function() {
-        const cabinetId = cabinetSelect.value;
-        const drawerId = drawerSelect.value;
+        await fetchAndRenderPackages({
+            searchQuery: '',
+            searchField: 'all',
+            useGlobalScope: false,
+        });
+    });
 
-        if (cabinetId && drawerId) {
-            try {
-                loadingElement.style.display = 'block';
-                visualizationContainer.style.display = 'none';
-                noDataElement.style.display = 'none';
-                packageDetailsElement.style.display = 'none';
+    searchBtn.addEventListener('click', async function() {
+        await fetchAndRenderPackages({
+            searchQuery: searchQueryInput.value.trim(),
+            searchField: searchFieldSelect.value,
+            useGlobalScope: globalSearchCheckbox.checked,
+        });
+    });
 
-                const query = new URLSearchParams({
-                    packCabinet: cabinetId,
-                    packDrawer: drawerId
-                });
-                const payload = await fetchJson(`${apiBaseUrl}/pack-packages.php?${query.toString()}`);
-                const packages = payload.packages || [];
+    resetSearchBtn.addEventListener('click', function() {
+        searchQueryInput.value = '';
+        searchFieldSelect.value = 'all';
+        globalSearchCheckbox.checked = false;
+        hideResultAreas();
+    });
 
-                if (packages.length > 0) {
-                    renderDrawer(cabinetId, drawerId, packages);
-                    visualizationContainer.style.display = 'block';
-                    noDataElement.style.display = 'none';
-                } else {
-                    visualizationContainer.style.display = 'none';
-                    noDataElement.style.display = 'block';
-                }
-
-                loadingElement.style.display = 'none';
-            } catch (error) {
-                console.error('Fehler beim Laden der Packungen:', error);
-                loadingElement.style.display = 'none';
-                alert('Fehler beim Laden der Packungen. Bitte versuchen Sie es später erneut.');
-            }
+    searchQueryInput.addEventListener('keydown', async function(event) {
+        if (event.key === 'Enter') {
+            await fetchAndRenderPackages({
+                searchQuery: searchQueryInput.value.trim(),
+                searchField: searchFieldSelect.value,
+                useGlobalScope: globalSearchCheckbox.checked,
+            });
         }
     });
 
-    function renderDrawer(cabinetId, drawerId, packages) {
+    async function fetchAndRenderPackages({ searchQuery = '', searchField = 'all', useGlobalScope = false }) {
+        const cabinetId = cabinetSelect.value;
+        const drawerId = drawerSelect.value;
+
+        if (searchQuery === '') {
+            if (useGlobalScope) {
+                alert('Bitte geben Sie einen Suchbegriff für die globale Suche ein.');
+                return;
+            }
+            if (!cabinetId || !drawerId) {
+                alert('Bitte wählen Sie zuerst Schrank und Schublade oder aktivieren Sie die globale Suche mit Suchbegriff.');
+                return;
+            }
+        }
+
+        if (!useGlobalScope && (!cabinetId || !drawerId)) {
+            alert('Bitte wählen Sie für die Schubladensuche zuerst Schrank und Schublade aus.');
+            return;
+        }
+
+        try {
+            loadingElement.style.display = 'block';
+            hideResultAreas();
+
+            const query = new URLSearchParams();
+
+            if (!useGlobalScope) {
+                query.set('packCabinet', cabinetId);
+                query.set('packDrawer', drawerId);
+            }
+
+            if (searchQuery !== '') {
+                query.set('search', searchQuery);
+                query.set('searchField', searchField);
+            }
+
+            const payload = await fetchJson(`${apiBaseUrl}/pack-packages.php?${query.toString()}`);
+            const packages = payload.packages || [];
+
+            if (useGlobalScope && searchQuery !== '') {
+                renderGlobalSearchResults(packages);
+                showSearchStatus(searchQuery, searchField, packages.length, 'global');
+                noDataElement.textContent = 'Keine Packungen im gesamten Kommissionierautomaten gefunden.';
+                noDataElement.style.display = packages.length > 0 ? 'none' : 'block';
+            } else {
+                if (packages.length > 0) {
+                    renderDrawer(cabinetId, drawerId, packages, searchQuery !== '');
+                    visualizationContainer.style.display = 'block';
+                    noDataElement.style.display = 'none';
+                } else {
+                    noDataElement.textContent = 'Keine Packungen in dieser Schublade vorhanden.';
+                    noDataElement.style.display = 'block';
+                }
+
+                if (searchQuery !== '') {
+                    showSearchStatus(searchQuery, searchField, packages.length, 'drawer', cabinetId, drawerId);
+                }
+            }
+
+            loadingElement.style.display = 'none';
+        } catch (error) {
+            console.error('Fehler beim Laden der Packungen:', error);
+            loadingElement.style.display = 'none';
+            alert(`Fehler beim Laden der Packungen: ${error.message}`);
+        }
+    }
+
+    function hideResultAreas() {
+        visualizationContainer.style.display = 'none';
+        searchResultsElement.style.display = 'none';
+        noDataElement.style.display = 'none';
+        packageDetailsElement.style.display = 'none';
+        hideSearchStatus();
+        searchResultsBodyElement.innerHTML = '';
+    }
+
+    function renderDrawer(cabinetId, drawerId, packages, highlightMatches) {
         drawerTitle.textContent = `Schrank ${cabinetId}, Schublade ${drawerId}`;
 
-        //const containerWidth = 800;
         const containerWidth = 1230;
         const scaleFactor = containerWidth / schubladeWidth;
         const containerHeight = schubladeHeight * scaleFactor;
@@ -169,15 +246,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const packageElement = document.createElement('div');
             packageElement.className = 'package';
+            if (highlightMatches) {
+                packageElement.classList.add('match');
+            }
             packageElement.style.left = `${x}px`;
             packageElement.style.top = `${y}px`;
             packageElement.style.width = `${width}px`;
             packageElement.style.height = `${height}px`;
             packageElement.title = `${pkg.Description || 'Unbekannt'}\n${pkg.ArticleId || ''}`;
             packageElement.dataset.package = JSON.stringify(pkg);
-
-            const shortText = pkg.Description ? pkg.Description.substring(0, 6) + '...' : 'PKG';
-            packageElement.textContent = shortText;
+            packageElement.textContent = pkg.Description ? `${pkg.Description.substring(0, 6)}...` : 'PKG';
 
             packageElement.addEventListener('click', function() {
                 showPackageDetails(JSON.parse(this.dataset.package));
@@ -192,13 +270,55 @@ document.addEventListener('DOMContentLoaded', function() {
         }, new Date(0));
 
         lastUpdateElement.textContent = `Letzte Aktualisierung: ${latestSnapshot.toLocaleString()}`;
-
         drawerInfoElement.innerHTML = `
             <p><strong>Schrank:</strong> ${cabinetId}</p>
             <p><strong>Schublade:</strong> ${drawerId}</p>
             <p><strong>Anzahl Packungen:</strong> ${packages.length}</p>
             <p><strong>Abmessungen der Schublade:</strong> ${schubladeWidth}mm x ${schubladeHeight}mm</p>
         `;
+    }
+
+    function renderGlobalSearchResults(packages) {
+        searchResultsBodyElement.innerHTML = '';
+
+        packages.forEach(pkg => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${pkg.PackId || 'N/A'}</td>
+                <td>${pkg.ArticleId || 'N/A'}</td>
+                <td>${pkg.PackBatchNo || 'N/A'}</td>
+                <td>${pkg.PackSerialNo || 'N/A'}</td>
+                <td>${pkg.PackCabinet || 'N/A'}</td>
+                <td>${pkg.PackDrawer || 'N/A'}</td>
+                <td>${pkg.Description || 'N/A'}</td>
+            `;
+            searchResultsBodyElement.appendChild(row);
+        });
+
+        searchResultsElement.style.display = packages.length > 0 ? 'block' : 'none';
+    }
+
+    function showSearchStatus(query, field, count, scope, cabinetId = null, drawerId = null) {
+        const labelByField = {
+            all: 'Alle Felder',
+            PackId: 'PackId',
+            ArticleId: 'ArticleId',
+            PackBatchNo: 'PackBatchNo',
+            PackSerialNo: 'PackSerialNo'
+        };
+
+        if (scope === 'global') {
+            searchStatusElement.textContent = `Suchbegriff „${query}“ in ${labelByField[field] || 'Alle Felder'}: ${count} Treffer im gesamten Kommissionierautomaten.`;
+        } else {
+            searchStatusElement.textContent = `Suchbegriff „${query}“ in ${labelByField[field] || 'Alle Felder'}: ${count} Treffer in Schrank ${cabinetId}, Schublade ${drawerId}.`;
+        }
+
+        searchStatusElement.style.display = 'block';
+    }
+
+    function hideSearchStatus() {
+        searchStatusElement.style.display = 'none';
+        searchStatusElement.textContent = '';
     }
 
     function showPackageDetails(pkg) {
