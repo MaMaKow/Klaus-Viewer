@@ -36,7 +36,7 @@ if ($packDrawerRaw !== null && $packDrawerRaw !== '') {
     }
 }
 
-$allowedSearchFields = ['all', 'PackId', 'ArticleId', 'PackBatchNo', 'PackSerialNo'];
+$allowedSearchFields = ['all', 'PackId', 'ArticleId', 'PackBatchNo', 'PackSerialNo', 'Description'];
 if (!in_array($searchField, $allowedSearchFields, true)) {
     http_response_code(400);
     echo json_encode(['error' => 'Invalid searchField parameter.'], JSON_THROW_ON_ERROR);
@@ -95,12 +95,14 @@ if ($search !== '') {
         $params['searchArticleId'] = '%' . $search . '%';
         $params['searchPackBatchNo'] = '%' . $search . '%';
         $params['searchPackSerialNo'] = '%' . $search . '%';
+        $params['searchPackName'] = '%' . $search . '%';
 
         $sql .= ' AND (
             CAST(`PackId` AS CHAR) LIKE :searchPackId
             OR CAST(`ArticleId` AS CHAR) LIKE :searchArticleId
             OR `PackBatchNo` LIKE :searchPackBatchNo
             OR `PackSerialNo` LIKE :searchPackSerialNo
+            OR `Description` LIKE :searchPackName
         )';
     } else {
         $params['search'] = '%' . $search . '%';

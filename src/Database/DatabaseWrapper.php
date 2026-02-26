@@ -128,12 +128,8 @@ class DatabaseWrapper {
      */
     public function run($sql_query, $arguments = []): \PDOStatement {
         try {
+            // \KlausViewer\Utility\GeneralUtility::printDebugVariable($sql_query, $arguments);
             $statement = $this->pdo->prepare($sql_query);
-            /*
-              if (false !== strpos($sql_query, "DELETE FROM `saturday_rotation_teams`")) {
-              \KlausViewer\Utility\GeneralUtility::printDebugVariable($sql_query, $arguments);
-              }
-             */
             $statement->execute($arguments);
             return $statement;
         } catch (Exception $exception) {

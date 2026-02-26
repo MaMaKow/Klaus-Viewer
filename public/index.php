@@ -46,16 +46,17 @@ $apiBaseUrl = 'api';
                 <select id="search-field">
                     <option value="all">Alle Felder</option>
                     <option value="PackId">PackId</option>
-                    <option value="ArticleId">ArticleId</option>
-                    <option value="PackBatchNo">PackBatchNo</option>
-                    <option value="PackSerialNo">PackSerialNo</option>
+                    <option value="ArticleId">PZN</option>
+                    <option value="PackBatchNo">Charge</option>
+                    <option value="PackSerialNo">Seriennummer</option>
+                    <option value="Description">Bezeichnung</option>
                 </select>
             </div>
 
             <div class="control-group checkbox-group">
                 <label for="global-search-checkbox">Bereich:</label>
                 <label class="checkbox-label">
-                    <input id="global-search-checkbox" type="checkbox">
+                    <input id="global-search-checkbox" type="checkbox" checked=checked>
                     Im gesamten Kommissionierautomaten suchen
                 </label>
             </div>
@@ -93,7 +94,7 @@ $apiBaseUrl = 'api';
                     <thead>
                         <tr>
                             <th>PackId</th>
-                            <th>ArticleId</th>
+                            <th>PZN</th>
                             <th>Charge</th>
                             <th>Seriennummer</th>
                             <th>Schrank</th>
