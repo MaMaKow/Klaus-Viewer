@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const minX = 0;
     const maxX = 1230;
     const minY = 0;
-    const maxY = 1860;
+    const maxY = 1400;
     const schubladeWidth = maxX - minX;
     const schubladeHeight = maxY - minY;
 
@@ -253,7 +253,12 @@ document.addEventListener('DOMContentLoaded', function() {
         let focusedPackage = null;
 
         packages.forEach(pkg => {
-            const x = (maxX - pkg.PackPlaceX - pkg.PackWidth) * scaleFactor;
+            let x;
+            if (3 == cabinetId) {
+                x = (pkg.PackPlaceX) * scaleFactor;
+            } else {
+                x = (maxX - pkg.PackPlaceX - pkg.PackWidth) * scaleFactor;
+            }
             const y = (maxY - pkg.PackPlaceY - pkg.PackLength) * scaleFactor;
             const width = pkg.PackWidth * scaleFactor;
             const height = pkg.PackLength * scaleFactor;
