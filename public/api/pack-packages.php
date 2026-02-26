@@ -8,15 +8,47 @@ use KlausViewer\Database\DatabaseWrapper;
 
 header('Content-Type: application/json; charset=utf-8');
 
-$packCabinet = filter_input(INPUT_GET, 'packCabinet', FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
-$packDrawer = filter_input(INPUT_GET, 'packDrawer', FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
+$packCabinetRaw = filter_input(INPUT_GET, 'packCabinet', FILTER_UNSAFE_RAW);
+$packDrawerRaw = filter_input(INPUT_GET, 'packDrawer', FILTER_UNSAFE_RAW);
 $search = filter_input(INPUT_GET, 'search', FILTER_UNSAFE_RAW);
 $searchField = filter_input(INPUT_GET, 'searchField', FILTER_UNSAFE_RAW) ?: 'all';
+
+$packCabinet = null;
+$packDrawer = null;
+$packCabinetInvalid = false;
+$packDrawerInvalid = false;
+
+if ($packCabinetRaw !== null && $packCabinetRaw !== '') {
+    $packCabinetValue = filter_var($packCabinetRaw, FILTER_VALIDATE_INT);
+    if ($packCabinetValue === false) {
+        $packCabinetInvalid = true;
+    } else {
+        $packCabinet = (int) $packCabinetValue;
+    }
+}
+
+if ($packDrawerRaw !== null && $packDrawerRaw !== '') {
+    $packDrawerValue = filter_var($packDrawerRaw, FILTER_VALIDATE_INT);
+    if ($packDrawerValue === false) {
+        $packDrawerInvalid = true;
+    } else {
+        $packDrawer = (int) $packDrawerValue;
+    }
+}
 
 $allowedSearchFields = ['all', 'PackId', 'ArticleId', 'PackBatchNo', 'PackSerialNo'];
 if (!in_array($searchField, $allowedSearchFields, true)) {
     http_response_code(400);
     echo json_encode(['error' => 'Invalid searchField parameter.'], JSON_THROW_ON_ERROR);
+    exit;
+}
+
+if ($packCabinetInvalid || $packDrawerInvalid) {
+    http_response_code(400);
+    echo json_encode(
+        ['error' => 'Invalid packCabinet or packDrawer parameter.'],
+        JSON_THROW_ON_ERROR
+    );
     exit;
 }
 
