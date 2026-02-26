@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const packageInfoElement = document.getElementById('package-info');
     const searchResultsElement = document.getElementById('search-results');
     const searchResultsBodyElement = document.getElementById('search-results-body');
+    let activePackageElement = null;
 
     const apiBaseUrl = document.body.dataset.apiBaseUrl || 'api';
 
@@ -29,7 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const schubladeWidth = maxX - minX;
     const schubladeHeight = maxY - minY;
 
-    fetchCabinets();
 
     async function fetchJson(url) {
         const response = await fetch(url, {
@@ -77,7 +77,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     cabinetSelect.addEventListener('change', async function() {
         const cabinetId = this.value;
-
         drawerSelect.innerHTML = '<option value="">Bitte wählen Sie eine Schublade</option>';
         drawerSelect.disabled = !cabinetId;
         visualizeBtn.disabled = true;
@@ -86,25 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (cabinetId) {
             try {
                 loadingElement.style.display = 'block';
-
-                const query = new URLSearchParams({
-                    packCabinet: cabinetId
-                });
-                const payload = await fetchJson(`${apiBaseUrl}/pack-drawers.php?${query.toString()}`);
-                const drawers = payload.packDrawers || [];
-
-                if (drawers.length > 0) {
-                    drawers.forEach(drawer => {
-                        const option = document.createElement('option');
-                        option.value = drawer;
-                        option.textContent = `Schublade ${drawer}`;
-                        drawerSelect.appendChild(option);
-                    });
-                    drawerSelect.disabled = false;
-                } else {
-                    drawerSelect.disabled = true;
-                }
-
+                await loadDrawers(cabinetId);
                 loadingElement.style.display = 'none';
             } catch (error) {
                 console.error('Fehler beim Laden der Schubladen:', error);
@@ -175,20 +156,13 @@ document.addEventListener('DOMContentLoaded', function() {
             loadingElement.style.display = 'block';
             hideResultAreas();
 
-            const query = new URLSearchParams();
-
-            if (!useGlobalScope) {
-                query.set('packCabinet', cabinetId);
-                query.set('packDrawer', drawerId);
-            }
-
-            if (searchQuery !== '') {
-                query.set('search', searchQuery);
-                query.set('searchField', searchField);
-            }
-
-            const payload = await fetchJson(`${apiBaseUrl}/pack-packages.php?${query.toString()}`);
-            const packages = payload.packages || [];
+            const packages = await fetchPackages({
+                cabinetId,
+                drawerId,
+                searchQuery,
+                searchField,
+                useGlobalScope,
+            });
 
             if (useGlobalScope && searchQuery !== '') {
                 renderGlobalSearchResults(packages);
@@ -197,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 noDataElement.style.display = packages.length > 0 ? 'none' : 'block';
             } else {
                 if (packages.length > 0) {
-                    renderDrawer(cabinetId, drawerId, packages, searchQuery !== '');
+                    renderDrawer(cabinetId, drawerId, packages, { highlightMatches: searchQuery !== '' });
                     visualizationContainer.style.display = 'block';
                     noDataElement.style.display = 'none';
                 } else {
@@ -223,11 +197,49 @@ document.addEventListener('DOMContentLoaded', function() {
         searchResultsElement.style.display = 'none';
         noDataElement.style.display = 'none';
         packageDetailsElement.style.display = 'none';
+        activePackageElement = null;
         hideSearchStatus();
         searchResultsBodyElement.innerHTML = '';
     }
 
-    function renderDrawer(cabinetId, drawerId, packages, highlightMatches) {
+    async function loadDrawers(cabinetId) {
+        const query = new URLSearchParams({
+            packCabinet: cabinetId
+        });
+        const payload = await fetchJson(`${apiBaseUrl}/pack-drawers.php?${query.toString()}`);
+        const drawers = payload.packDrawers || [];
+
+        drawerSelect.innerHTML = '<option value="">Bitte wählen Sie eine Schublade</option>';
+
+        drawers.forEach(drawer => {
+            const option = document.createElement('option');
+            option.value = drawer;
+            option.textContent = `Schublade ${drawer}`;
+            drawerSelect.appendChild(option);
+        });
+
+        drawerSelect.disabled = drawers.length === 0;
+        return drawers;
+    }
+
+    async function fetchPackages({ cabinetId, drawerId, searchQuery = '', searchField = 'all', useGlobalScope = false }) {
+        const query = new URLSearchParams();
+
+        if (!useGlobalScope) {
+            query.set('packCabinet', cabinetId);
+            query.set('packDrawer', drawerId);
+        }
+
+        if (searchQuery !== '') {
+            query.set('search', searchQuery);
+            query.set('searchField', searchField);
+        }
+
+        const payload = await fetchJson(`${apiBaseUrl}/pack-packages.php?${query.toString()}`);
+        return payload.packages || [];
+    }
+
+    function renderDrawer(cabinetId, drawerId, packages, { highlightMatches = false, focusPackId = null, autoShowDetails = false } = {}) {
         drawerTitle.textContent = `Schrank ${cabinetId}, Schublade ${drawerId}`;
 
         const containerWidth = 1230;
@@ -237,6 +249,8 @@ document.addEventListener('DOMContentLoaded', function() {
         drawerElement.style.width = `${containerWidth}px`;
         drawerElement.style.height = `${containerHeight}px`;
         drawerElement.innerHTML = '';
+
+        let focusedPackage = null;
 
         packages.forEach(pkg => {
             const x = (maxX - pkg.PackPlaceX - pkg.PackWidth) * scaleFactor;
@@ -258,11 +272,22 @@ document.addEventListener('DOMContentLoaded', function() {
             packageElement.textContent = pkg.Description ? `${pkg.Description.substring(0, 6)}...` : 'PKG';
 
             packageElement.addEventListener('click', function() {
-                showPackageDetails(JSON.parse(this.dataset.package));
+                setActivePackage(this, JSON.parse(this.dataset.package));
             });
+
+            if (focusPackId && String(pkg.PackId) === String(focusPackId)) {
+                focusedPackage = { packageElement, pkg };
+            }
 
             drawerElement.appendChild(packageElement);
         });
+
+        if (focusedPackage) {
+            setActivePackage(focusedPackage.packageElement, focusedPackage.pkg);
+            if (autoShowDetails) {
+                focusedPackage.packageElement.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+            }
+        }
 
         const latestSnapshot = packages.reduce((latest, pkg) => {
             const snapshotTime = new Date(pkg.SnapshotTime);
@@ -283,6 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         packages.forEach(pkg => {
             const row = document.createElement('tr');
+            row.className = 'search-result-row';
             row.innerHTML = `
                 <td>${pkg.PackId || 'N/A'}</td>
                 <td>${pkg.ArticleId || 'N/A'}</td>
@@ -291,7 +317,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${pkg.PackCabinet || 'N/A'}</td>
                 <td>${pkg.PackDrawer || 'N/A'}</td>
                 <td>${pkg.Description || 'N/A'}</td>
+                <td><a class="drawer-link" href="?cabinet=${encodeURIComponent(pkg.PackCabinet || '')}&drawer=${encodeURIComponent(pkg.PackDrawer || '')}&packId=${encodeURIComponent(pkg.PackId || '')}" target="_blank" rel="noopener noreferrer">In neuem Tab öffnen</a></td>
             `;
+
+            row.addEventListener('click', async function(event) {
+                if (event.target.closest('a')) {
+                    return;
+                }
+                await openPackageFromSearch(pkg);
+            });
+
             searchResultsBodyElement.appendChild(row);
         });
 
@@ -339,4 +374,78 @@ document.addEventListener('DOMContentLoaded', function() {
 
         packageDetailsElement.style.display = 'block';
     }
+
+    function setActivePackage(packageElement, pkg) {
+        if (activePackageElement) {
+            activePackageElement.classList.remove('selected');
+        }
+
+        activePackageElement = packageElement;
+        activePackageElement.classList.add('selected');
+        showPackageDetails(pkg);
+    }
+
+    async function openPackageFromSearch(pkg) {
+        if (!pkg.PackCabinet || !pkg.PackDrawer) {
+            return;
+        }
+
+        try {
+            loadingElement.style.display = 'block';
+            visualizationContainer.style.display = 'none';
+
+            cabinetSelect.value = String(pkg.PackCabinet);
+            await loadDrawers(String(pkg.PackCabinet));
+            drawerSelect.value = String(pkg.PackDrawer);
+            visualizeBtn.disabled = false;
+
+            const drawerPackages = await fetchPackages({
+                cabinetId: String(pkg.PackCabinet),
+                drawerId: String(pkg.PackDrawer),
+            });
+
+            if (drawerPackages.length > 0) {
+                renderDrawer(String(pkg.PackCabinet), String(pkg.PackDrawer), drawerPackages, {
+                    focusPackId: pkg.PackId,
+                    autoShowDetails: true,
+                });
+                visualizationContainer.style.display = 'block';
+                noDataElement.style.display = 'none';
+                visualizationContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                noDataElement.textContent = 'Keine Packungen in dieser Schublade vorhanden.';
+                noDataElement.style.display = 'block';
+            }
+
+            loadingElement.style.display = 'none';
+        } catch (error) {
+            loadingElement.style.display = 'none';
+            console.error('Fehler beim Öffnen des Suchtreffers:', error);
+            alert(`Fehler beim Öffnen des Suchtreffers: ${error.message}`);
+        }
+    }
+
+    async function openFromLocationParams() {
+        const params = new URLSearchParams(window.location.search);
+        const cabinetId = params.get('cabinet');
+        const drawerId = params.get('drawer');
+        const packId = params.get('packId');
+
+        if (!cabinetId || !drawerId) {
+            return;
+        }
+
+        await openPackageFromSearch({
+            PackCabinet: cabinetId,
+            PackDrawer: drawerId,
+            PackId: packId,
+        });
+    }
+
+    async function initialize() {
+        await fetchCabinets();
+        await openFromLocationParams();
+    }
+
+    initialize();
 });

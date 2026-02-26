@@ -124,6 +124,25 @@ button:disabled {
     background-color: #eef3f7;
 }
 
+
+.search-result-row {
+    cursor: pointer;
+}
+
+.search-result-row:hover {
+    background-color: #f1f7fd;
+}
+
+.drawer-link {
+    color: #1f6fb2;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.drawer-link:hover {
+    text-decoration: underline;
+}
+
 .drawer-container {
     position: relative;
     border: 2px solid #7f8c8d;
@@ -146,6 +165,15 @@ button:disabled {
     text-overflow: ellipsis;
     transition: all 0.2s;
     cursor: pointer;
+}
+
+
+.package.selected {
+    background-color: rgba(231, 76, 60, 0.9);
+    border-color: #c0392b;
+    z-index: 20;
+    transform: scale(1.04);
+    box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.35);
 }
 
 .package:hover {
