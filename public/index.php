@@ -100,6 +100,7 @@ $apiBaseUrl = 'api';
                             <th>Schrank</th>
                             <th>Schublade</th>
                             <th>Beschreibung</th>
+                            <th>Aktion</th>
                         </tr>
                     </thead>
                     <tbody id="search-results-body"></tbody>
