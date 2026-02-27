@@ -133,6 +133,19 @@ button:disabled {
     background-color: #f1f7fd;
 }
 
+.outlier-row {
+    cursor: pointer;
+}
+
+.outlier-row:hover {
+    background-color: #fff5f0;
+}
+
+.deviation-critical {
+    color: #c0392b;
+    font-weight: 700;
+}
+
 .drawer-link {
     color: #1f6fb2;
     text-decoration: none;

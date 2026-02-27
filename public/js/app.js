@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const globalSearchCheckbox = document.getElementById('global-search-checkbox');
     const searchBtn = document.getElementById('search-btn');
     const resetSearchBtn = document.getElementById('reset-search-btn');
+    const outlierBtn = document.getElementById('outlier-btn');
     const searchStatusElement = document.getElementById('search-status');
     const visualizationContainer = document.getElementById('visualization-container');
     const drawerElement = document.getElementById('drawer');
@@ -19,6 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const packageInfoElement = document.getElementById('package-info');
     const searchResultsElement = document.getElementById('search-results');
     const searchResultsBodyElement = document.getElementById('search-results-body');
+    const outlierResultsElement = document.getElementById('outlier-results');
+    const outlierResultsBodyElement = document.getElementById('outlier-results-body');
     let activePackageElement = null;
 
     const apiBaseUrl = document.body.dataset.apiBaseUrl || 'api';
@@ -122,6 +125,10 @@ document.addEventListener('DOMContentLoaded', function() {
         hideResultAreas();
     });
 
+    outlierBtn.addEventListener('click', async function() {
+        await showOutliers();
+    });
+
     searchQueryInput.addEventListener('keydown', async function(event) {
         if (event.key === 'Enter') {
             await fetchAndRenderPackages({
@@ -195,11 +202,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function hideResultAreas() {
         visualizationContainer.style.display = 'none';
         searchResultsElement.style.display = 'none';
+        outlierResultsElement.style.display = 'none';
         noDataElement.style.display = 'none';
         packageDetailsElement.style.display = 'none';
         activePackageElement = null;
         hideSearchStatus();
         searchResultsBodyElement.innerHTML = '';
+        outlierResultsBodyElement.innerHTML = '';
     }
 
     async function loadDrawers(cabinetId) {
@@ -222,12 +231,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return drawers;
     }
 
-    async function fetchPackages({ cabinetId, drawerId, searchQuery = '', searchField = 'all', useGlobalScope = false }) {
+    async function fetchPackages({ cabinetId, drawerId, searchQuery = '', searchField = 'all', useGlobalScope = false, includeAllGlobal = false }) {
         const query = new URLSearchParams();
 
         if (!useGlobalScope) {
             query.set('packCabinet', cabinetId);
             query.set('packDrawer', drawerId);
+        }
+
+        if (includeAllGlobal) {
+            query.set('includeAllGlobal', '1');
         }
 
         if (searchQuery !== '') {
@@ -310,6 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderGlobalSearchResults(packages) {
         searchResultsBodyElement.innerHTML = '';
+        outlierResultsBodyElement.innerHTML = '';
 
         packages.forEach(pkg => {
             const row = document.createElement('tr');
@@ -336,6 +350,136 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         searchResultsElement.style.display = packages.length > 0 ? 'block' : 'none';
+    }
+
+    function calculateMedian(values) {
+        const sorted = values.slice().sort((a, b) => a - b);
+        if (sorted.length === 0) {
+            return null;
+        }
+
+        const middle = Math.floor(sorted.length / 2);
+        if (sorted.length % 2 === 0) {
+            return (sorted[middle - 1] + sorted[middle]) / 2;
+        }
+
+        return sorted[middle];
+    }
+
+    function formatDeviation(value, median) {
+        if (!Number.isFinite(value) || median === null) {
+            return 'N/A';
+        }
+
+        const deviation = Math.abs(value - median);
+        return `${value.toFixed(1)} mm (Δ ${deviation.toFixed(1)} mm)`;
+    }
+
+    async function showOutliers() {
+        try {
+            loadingElement.style.display = 'block';
+            hideResultAreas();
+
+            const packages = await fetchPackages({
+                useGlobalScope: true,
+                includeAllGlobal: true,
+            });
+
+            const groupedByArticleId = new Map();
+            packages.forEach(pkg => {
+                const articleId = pkg.ArticleId ? String(pkg.ArticleId) : '';
+                if (articleId === '') {
+                    return;
+                }
+                if (!groupedByArticleId.has(articleId)) {
+                    groupedByArticleId.set(articleId, []);
+                }
+                groupedByArticleId.get(articleId).push(pkg);
+            });
+
+            const outliers = [];
+
+            groupedByArticleId.forEach((articlePackages, articleId) => {
+                if (articlePackages.length < 2) {
+                    return;
+                }
+
+                const lengths = articlePackages.map(pkg => Number(pkg.PackLength)).filter(value => Number.isFinite(value));
+                const widths = articlePackages.map(pkg => Number(pkg.PackWidth)).filter(value => Number.isFinite(value));
+                const heights = articlePackages.map(pkg => Number(pkg.PackHeight)).filter(value => Number.isFinite(value));
+
+                const medianLength = calculateMedian(lengths);
+                const medianWidth = calculateMedian(widths);
+                const medianHeight = calculateMedian(heights);
+
+                articlePackages.forEach(pkg => {
+                    const length = Number(pkg.PackLength);
+                    const width = Number(pkg.PackWidth);
+                    const height = Number(pkg.PackHeight);
+
+                    const lengthDeviation = Number.isFinite(length) && medianLength !== null ? Math.abs(length - medianLength) : 0;
+                    const widthDeviation = Number.isFinite(width) && medianWidth !== null ? Math.abs(width - medianWidth) : 0;
+                    const heightDeviation = Number.isFinite(height) && medianHeight !== null ? Math.abs(height - medianHeight) : 0;
+
+                    if (lengthDeviation > 10 || widthDeviation > 10 || heightDeviation > 10) {
+                        outliers.push({
+                            ...pkg,
+                            articleId,
+                            medianLength,
+                            medianWidth,
+                            medianHeight,
+                            lengthDeviation,
+                            widthDeviation,
+                            heightDeviation,
+                        });
+                    }
+                });
+            });
+
+            renderOutlierResults(outliers);
+            noDataElement.textContent = 'Keine Ausreißer gefunden.';
+            noDataElement.style.display = outliers.length > 0 ? 'none' : 'block';
+
+            loadingElement.style.display = 'none';
+        } catch (error) {
+            loadingElement.style.display = 'none';
+            console.error('Fehler beim Laden der Ausreißer:', error);
+            alert(`Fehler beim Laden der Ausreißer: ${error.message}`);
+        }
+    }
+
+    function renderOutlierResults(outliers) {
+        outlierResultsBodyElement.innerHTML = '';
+
+        outliers
+            .sort((a, b) => (b.lengthDeviation + b.widthDeviation + b.heightDeviation) - (a.lengthDeviation + a.widthDeviation + a.heightDeviation))
+            .forEach(pkg => {
+                const row = document.createElement('tr');
+                row.className = 'outlier-row';
+
+                const lengthCritical = pkg.lengthDeviation > 10 ? 'deviation-critical' : '';
+                const widthCritical = pkg.widthDeviation > 10 ? 'deviation-critical' : '';
+                const heightCritical = pkg.heightDeviation > 10 ? 'deviation-critical' : '';
+
+                row.innerHTML = `
+                    <td>${pkg.PackId || 'N/A'}</td>
+                    <td>${pkg.articleId || 'N/A'}</td>
+                    <td>${pkg.Description || 'N/A'}</td>
+                    <td>${pkg.PackCabinet || 'N/A'}</td>
+                    <td>${pkg.PackDrawer || 'N/A'}</td>
+                    <td class="${lengthCritical}">${formatDeviation(Number(pkg.PackLength), pkg.medianLength)}</td>
+                    <td class="${widthCritical}">${formatDeviation(Number(pkg.PackWidth), pkg.medianWidth)}</td>
+                    <td class="${heightCritical}">${formatDeviation(Number(pkg.PackHeight), pkg.medianHeight)}</td>
+                `;
+
+                row.addEventListener('click', async function() {
+                    await openPackageFromSearch(pkg);
+                });
+
+                outlierResultsBodyElement.appendChild(row);
+            });
+
+        outlierResultsElement.style.display = outliers.length > 0 ? 'block' : 'none';
     }
 
     function showSearchStatus(query, field, count, scope, cabinetId = null, drawerId = null) {
