@@ -12,6 +12,7 @@ $packCabinetRaw = filter_input(INPUT_GET, 'packCabinet', FILTER_UNSAFE_RAW);
 $packDrawerRaw = filter_input(INPUT_GET, 'packDrawer', FILTER_UNSAFE_RAW);
 $search = filter_input(INPUT_GET, 'search', FILTER_UNSAFE_RAW);
 $searchField = filter_input(INPUT_GET, 'searchField', FILTER_UNSAFE_RAW) ?: 'all';
+$includeAllGlobal = filter_input(INPUT_GET, 'includeAllGlobal', FILTER_VALIDATE_BOOLEAN);
 
 $packCabinet = null;
 $packDrawer = null;
@@ -65,7 +66,7 @@ if ($hasCabinet xor $hasDrawer) {
 }
 
 $search = trim((string) $search);
-if (!$hasCabinet && $search === '') {
+if (!$hasCabinet && $search === '' && !$includeAllGlobal) {
     http_response_code(400);
     echo json_encode(
         ['error' => 'For a global search, the search parameter is required.'],

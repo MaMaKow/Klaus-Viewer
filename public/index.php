@@ -63,6 +63,7 @@ $apiBaseUrl = 'api';
 
             <button id="search-btn">Suchen</button>
             <button id="reset-search-btn">Suche zurücksetzen</button>
+            <button id="outlier-btn">Ausreißer anzeigen</button>
         </div>
 
         <div class="search-status" id="search-status" style="display: none;"></div>
@@ -104,6 +105,27 @@ $apiBaseUrl = 'api';
                         </tr>
                     </thead>
                     <tbody id="search-results-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="search-results" id="outlier-results" style="display: none;">
+            <h2>Ausreißer (Abweichung &gt; 10 mm vom Median je PZN)</h2>
+            <div class="results-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>PackId</th>
+                            <th>PZN</th>
+                            <th>Beschreibung</th>
+                            <th>Schrank</th>
+                            <th>Schublade</th>
+                            <th>Länge (Δ)</th>
+                            <th>Breite (Δ)</th>
+                            <th>Höhe (Δ)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="outlier-results-body"></tbody>
                 </table>
             </div>
         </div>
