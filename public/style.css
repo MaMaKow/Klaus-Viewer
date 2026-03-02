@@ -22,6 +22,19 @@ h1 {
     padding-bottom: 10px;
 }
 
+
+.app-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+}
+
 .controls,
 .search-controls {
     display: flex;

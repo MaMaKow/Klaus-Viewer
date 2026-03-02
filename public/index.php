@@ -7,11 +7,16 @@ $apiBaseUrl = 'api';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lagerverwaltungssystem - Schubladenvisualisierung</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
     <link rel="stylesheet" type="text/css" href="style.css" media="all">
 </head>
 <body data-api-base-url="<?= htmlspecialchars($apiBaseUrl, ENT_QUOTES, 'UTF-8'); ?>">
     <div class="container">
-        <h1>Lagerverwaltungssystem - Schubladenvisualisierung</h1>
+        <h1 class="app-title">
+            <img src="icon.svg" alt="Klaus Viewer Icon" class="app-icon">
+            Lagerverwaltungssystem - Schubladenvisualisierung
+        </h1>
 
         <div class="controls">
             <div class="control-group">

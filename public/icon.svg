@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Klaus Viewer Icon</title>
+  <desc id="desc">Ein stilisierter Schrank mit geöffneten Schubladen, markiertem Paket und Schriftzug Klaus.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2c3e50" />
+      <stop offset="100%" stop-color="#3498db" />
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="112" height="112" rx="22" fill="url(#bg)" />
+  <rect x="28" y="24" width="72" height="72" rx="8" fill="#ecf0f1" opacity="0.95" />
+
+  <rect x="34" y="30" width="60" height="14" rx="3" fill="#95a5a6" />
+  <rect x="34" y="48" width="60" height="14" rx="3" fill="#95a5a6" />
+  <rect x="34" y="66" width="60" height="14" rx="3" fill="#95a5a6" />
+
+  <rect x="66" y="66" width="40" height="16" rx="3" fill="#d5dbdb" stroke="#7f8c8d" stroke-width="2" />
+  <rect x="74" y="68" width="22" height="12" rx="2" fill="#27ae60" />
+  <circle cx="86" cy="74" r="2.2" fill="#ecf0f1" />
+
+  <circle cx="84" cy="37" r="2" fill="#2c3e50" />
+  <circle cx="84" cy="55" r="2" fill="#2c3e50" />
+  <circle cx="62" cy="73" r="2" fill="#2c3e50" />
+
+  <text x="64" y="112" text-anchor="middle" font-family="Segoe UI, Tahoma, Verdana, sans-serif" font-size="16" font-weight="700" fill="#ecf0f1" letter-spacing="0.5">Klaus</text>
+</svg>
